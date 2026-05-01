@@ -429,7 +429,7 @@ from the full 60-epoch run.
 
 | ![Loss Curves](https://i.postimg.cc/pTChbNGb/training-history-(1).png) |
 | :--: |
-| **Training History: Loss and mIoU over 39 epochs.** |
+| **Training History: Loss and mIoU over 60 epochs.** |
 """
 
 
