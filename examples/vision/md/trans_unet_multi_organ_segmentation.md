@@ -1,22 +1,24 @@
-"""
-Title: 2D Multi-Organ Segmentation with TransUNet
-Author: [Yassien Wasfy](https://www.linkedin.com/in/yassien-wasfy-315ab5349/)
-Date created: 2026/04/29
-Last modified: 2026/04/29
-Description: TransUNet for 2D multi-organ segmentation on the Synapse dataset.
-Accelerator: GPU
-"""
+# 2D Multi-Organ Segmentation with TransUNet
 
-"""
+**Author:** [Yassien Wasfy](https://www.linkedin.com/in/yassien-wasfy-315ab5349/)<br>
+**Date created:** 2026/04/29<br>
+**Last modified:** 2026/04/29<br>
+**Description:** TransUNet for 2D multi-organ segmentation on the Synapse dataset.
+
+
+<img class="k-inline-icon" src="https://colab.research.google.com/img/colab_favicon.ico"/> [**View in Colab**](https://colab.research.google.com/github/keras-team/keras-io/blob/master/examples/vision/ipynb/trans_unet_multi_organ_segmentation.ipynb)  <span class="k-dot">•</span><img class="k-inline-icon" src="https://github.com/favicon.ico"/> [**GitHub source**](https://github.com/keras-team/keras-io/blob/master/examples/vision/trans_unet_multi_organ_segmentation.py)
+
+
+
+---
 ## Introduction
 
 We implement TransUNet (Chen et al., 2021), a hybrid CNN-Transformer architecture
 for 2D multi-organ segmentation. A ResNet-50 backbone extracts a feature pyramid,
 a Vision Transformer encodes global context, and a cascaded upsampling decoder
 recovers spatial resolution via U-Net skip connections.
-"""
 
-"""
+---
 ## The Synapse Dataset
 
 The Synapse Multi-Organ Segmentation dataset contains 30 abdominal CT scans from
@@ -32,8 +34,7 @@ slices. The dataset is distributed in two formats:
 The dataset can be accessed on
 [Kaggle](https://www.kaggle.com/datasets/dogcdt/synapse).
 
-"""
-"""
+---
 ## Segmentation Labels
 
 Each pixel is assigned one of 9 class labels corresponding to abdominal organs:
@@ -49,8 +50,8 @@ Each pixel is assigned one of 9 class labels corresponding to abdominal organs:
 | 6 | Pancreas |
 | 7 | Spleen |
 | 8 | Stomach |
-"""
-"""
+
+---
 ## What This Tutorial Covers
 
 We provide an end-to-end workflow for 2D multi-organ segmentation using TransUNet.
@@ -71,12 +72,12 @@ multi-class Dice loss. Evaluate with `MeanIoU` across all 9 organ classes.
 
 5. **Inference and Visualization** — Run batched slice-level inference on full
 3D volumes and visualize predicted masks overlaid on CT slices.
-"""
 
-"""
+---
 ## Setup
-"""
 
+
+```python
 import os
 
 os.environ["KERAS_BACKEND"] = "tensorflow"
@@ -111,11 +112,13 @@ LABEL_COLORS = {
 }
 CLASS_NAMES = [name for name, _ in LABEL_COLORS.values()]
 PALETTE = np.array([color for _, color in LABEL_COLORS.values()], dtype=np.uint8)
+```
 
-"""
+---
 ## Data Pipeline
-"""
 
+
+```python
 TRAIN_PATH = "train_npz"
 VAL_PATH = "test_vol_h5"
 
@@ -193,8 +196,9 @@ val_dataset = (
     .cache()
     .prefetch(tf.data.AUTOTUNE)
 )
+```
 
-"""
+---
 ## Model Architecture
 
 TransUNet operates in three stages:
@@ -214,8 +218,9 @@ produces the per-pixel class probabilities.
 | ![TransUNet Architecture](https://i.postimg.cc/15cppkRJ/transunet-architecture.png) |
 | :--: |
 | **TransUNet Architecture Overview** |
-"""
 
+
+```python
 _Up = keras.layers.UpSampling2D
 _C2D = keras.layers.Conv2D
 _GN = keras.layers.GroupNormalization
@@ -375,15 +380,17 @@ class TransUNet(keras.Model):
         keys += ["hidden_dim", "dropout_rate", "num_classes"]
         return {**super().get_config(), **{k: getattr(self, k) for k in keys}}
 
+```
 
-"""
+---
 ## Loss and Metrics
 
 We combine sparse categorical cross-entropy with a soft multi-class Dice loss,
 weighted equally, The `MeanIoUWrapper` adapts
 `keras.metrics.MeanIoU` to accept sparse integer labels directly.
-"""
 
+
+```python
 
 @keras.saving.register_keras_serializable(package="Trans-UNET")
 def combined_loss(y_true, y_pred, smooth=1e-6):
@@ -425,11 +432,13 @@ class MeanIoUWrapper(keras.metrics.MeanIoU):
     def from_config(cls, config):
         return cls(**config)
 
+```
 
-"""
+---
 ## Training
-"""
 
+
+```python
 model = TransUNet(
     image_size=(IMAGE_SIZE, IMAGE_SIZE, 3),
     embedding_dim=PROJECTION_DIM,
@@ -458,11 +467,13 @@ history = model.fit(
     epochs=NUM_EPOCHS,
     callbacks=[_rlr, _es],
 )
+```
 
-"""
+---
 ## Loss Curves
-"""
 
+
+```python
 _, axes = plt.subplots(1, 2, figsize=(14, 4))
 for ax, train_key, val_key, ylabel in zip(
     axes,
@@ -478,8 +489,8 @@ for ax, train_key, val_key, ylabel in zip(
 plt.tight_layout()
 plt.show()
 
+```
 
-"""
 We train for 2 epochs for demonstration. Full convergence requires 60 epochs
 (approximately 1 hour on a T4 GPU). The loss and mIoU curves below are
 from the full 60-epoch run.
@@ -487,13 +498,12 @@ from the full 60-epoch run.
 | ![Loss Curves](https://i.postimg.cc/pTChbNGb/training-history-(1).png) |
 | :--: |
 | **Training History: Loss and mIoU over 60 epochs.** |
-"""
 
-
-"""
+---
 ## Inference
-"""
 
+
+```python
 
 def colorize_mask(mask):
     """Maps an integer label mask to an RGB image using PALETTE."""
@@ -550,9 +560,8 @@ def run_inference(model, h5_paths, num_samples=5, n_slices=5):
 
 
 run_inference(model, RAW_VAL_FILES, num_samples=6, n_slices=5)
+```
 
-"""
 | ![Inference Results](https://i.postimg.cc/jdr93pVR/inference-case0022-npy.png) |
 | :--: |
 | **TransUNet predictions after 60 epochs. Ground truth (center) vs. prediction (right).** |
-"""
